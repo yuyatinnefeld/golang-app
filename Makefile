@@ -1,16 +1,19 @@
-DB_URL=postgresql://$(POSTGRES_USER):$(POSTGRES_PWD)@127.0.0.1:5432/$(POSTGRES_DB)?sslmode=disable
+DB_URL=postgresql://root:secret@localhost:5432/simple_bank?sslmode=disable
 
 network:
 	docker network create bank-network
 
 postgres:
-	docker run --name $(CONTAINER_NAME) -p 5432:5432 -e POSTGRES_USER=$(POSTGRES_USER) -e POSTGRES_PASSWORD=$(POSTGRES_PWD) -d $(IMG_NAME)
+	docker run --name postgres --network bank-network -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:14-alpine
+
+mysql:
+	docker run --name mysql8 -p 3306:3306  -e MYSQL_ROOT_PASSWORD=secret -d mysql:8
 
 createdb:
-	docker exec -it $(CONTAINER_NAME) createdb --username=$(POSTGRES_USER) --owner=$(POSTGRES_USER) $(POSTGRES_DB)
+	docker exec -it postgres createdb --username=root --owner=root simple_bank
 
 dropdb:
-	docker exec -it $(CONTAINER_NAME) dropdb $(POSTGRES_DB)
+	docker exec -it postgres dropdb simple_bank
 
 migrateup:
 	migrate -path db/migration -database "$(DB_URL)" -verbose up
@@ -29,7 +32,7 @@ db_docs:
 
 db_schema:
 	dbml2sql --postgres -o doc/schema.sql doc/db.dbml
-	
+
 sqlc:
 	sqlc generate
 
